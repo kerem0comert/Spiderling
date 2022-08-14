@@ -31,9 +31,11 @@ typedef struct Vector3{
 
 typedef struct Joint
 {
-  Vector3 currSite;
-  Vector3 targetSite;
-  Vector3 currSpeed;
+  bool isMoving;
+  unsigned long moveTimeSoFar
+  unsigned long targetTime;
+  unsigned int currAngle;
+  unsigned int targetAngle
 } Joint;
 
 enum MoveSpeeds {
@@ -46,7 +48,6 @@ enum MoveSpeeds {
 const unsigned char JOINT_COUNT = 8;
 Joint joints[JOINT_COUNT];
 
-float currMoveSpeed;
 
 void setup()
 {
@@ -55,16 +56,19 @@ void setup()
   int i;
   for (i = 0; i < JOINT_COUNT; i++)
   {
-    joints[i].currSite
+    joints[i].moveTimeSoFar = 0;
+    joints[i].targetAngle = 0;
+    joints[i].targetTime = 0;
+    joints[i].isMoving = false;
   }
-  joints[0].currSite = 250;
-  joints[1].currSite = 40;
-  joints[2].currSite = 140;
-  joints[3].currSite = 350;
-  joints[4].currSite = 250;
-  joints[5].currSite = 40;
-  joints[6].currSite = 160;
-  joints[7].currSite = 350;
+  joints[0].currAngle = 250;
+  joints[1].currAngle = 40;
+  joints[2].currAngle = 140;
+  joints[3].currAngle = 350;
+  joints[4].currAngle = 250;
+  joints[5].currAngle = 40;
+  joints[6].currAngle = 160;
+  joints[7].currAngle = 350;
 
   FlexiTimer2::set(20, checkMovements);
   FlexiTimer2::start();
@@ -78,7 +82,7 @@ void setup()
 void startTimedMovement(unsigned char jointId, unsigned int targetAngle, unsigned long targetTime)
 {
   joints[jointId].targetTime = targetTime;
-  joints[jointId].targetSite = targetAngle;
+  joints[jointId].targetAngle = targetAngle;
   joints[jointId].isMoving = true;
   joints[jointId].moveTimeSoFar = 0;
 }
@@ -103,9 +107,9 @@ void checkMovements(void)
     if (joints[i].isMoving)
     {
       // Target time has been reached
-      if (joints[i].moveTimeSoFar == joints[i].targetTime)
+      if (joints[i].moveTimeSoFar > joints[i].targetTime)
       {
-        joints[i].targetSite = 0;
+        joints[i].targetAngle = 0;
         joints[i].targetTime = 0;
         joints[i].isMoving = false;
       }
@@ -115,8 +119,8 @@ void checkMovements(void)
             joints[i].moveTimeSoFar, // Current progress
             0,                       // Start time
             joints[i].targetTime,    // End time
-            joints[i].currSite,
-            joints[i].targetSite);
+            joints[i].currAngle,
+            joints[i].targetAngle);
         joints[i].moveTimeSoFar = currentTime;
         Serial.println("Servo " + String(i) + " moves to angle " + String(angle) + ". MoveTimeSoFar " + String(joints[i].moveTimeSoFar));
         HCPCA9685.Servo(i, angle);
