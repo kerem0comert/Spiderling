@@ -42,6 +42,7 @@ typedef struct Joint
   unsigned long targetTime;
   volatile unsigned int currAngle;
   unsigned int targetAngle;
+  unsigned char diff;
 } Joint;
 /*
   enum MoveSpeeds {
@@ -53,7 +54,9 @@ typedef struct Joint
 */
 const unsigned char JOINT_COUNT = 8;
 Joint joints[JOINT_COUNT];
-const unsigned int SERVO_MOVEMENT_TIME = 50000;
+const unsigned int SERVO_MOVEMENT_TIME = 1000;
+const unsigned char SERVO_MOVEMENT_THERSHOLD = 10;
+
 
 void setup()
 {
@@ -61,7 +64,7 @@ void setup()
   HCPCA9685.Sleep(false);
   Serial.begin(9600);
   // Initialize joints
-  int defaultAngles[8] = {150, 40, 140, 350, 250, 40, 160, 350};
+  //int defaultAngles[8] = {150, 40, 140, 350, 250, 40, 160, 350};
   int i;
   for (i = 0; i < JOINT_COUNT; i++)
   {
@@ -69,22 +72,23 @@ void setup()
     joints[i].targetTime = 0;
     joints[i].isMoving = false;
     joints[i].moveTimeSoFar = 0;
-    joints[i].currAngle = defaultAngles[i];
+    joints[i].currAngle = 0; // defaultAngles[i];
+    joints[i].diff = 100;
   }
 
-  FlexiTimer2::set(10, checkMovements);
+  FlexiTimer2::set(100, checkMovements);
   FlexiTimer2::start();
 
   // Here, specify which move to start, e.g.:
   /*
-   startTimedMovement(1, 350, 10000);
-   startTimedMovement(2, 350, 3000);
-   startTimedMovement(3, 100, 5000);
-   startTimedMovement(4, 100, 7000);
-   startTimedMovement(5, 350, 100000);
- */
-  forward(2);
-  forward
+    startTimedMovement(1, 350, 10000);
+    startTimedMovement(2, 350, 3000);
+    startTimedMovement(3, 100, 5000);
+    startTimedMovement(4, 100, 7000);
+    startTimedMovement(5, 350, 100000);
+  */
+  forward();
+
 }
 
 void startTimedMovement(unsigned char jointId, unsigned int targetAngle, unsigned long targetTime)
@@ -109,11 +113,17 @@ void waitAllToReach()
     {
       if (joints[i].isMoving)
       {
+        // Serial.println("Servo " + String(i) + " is still moving."); 
         allReached = false;
         break;
       }
     }
   }
+  noInterrupts();
+  Serial.println("All reached."); 
+
+  delay(50);
+  interrupts();
 }
 
 void checkMovements(void)
@@ -126,7 +136,9 @@ void checkMovements(void)
     if (joints[i].isMoving)
     {
       // Target time has been reached
-      if (joints[i].moveTimeSoFar > joints[i].targetTime)
+      if ((joints[i].moveTimeSoFar > joints[i].targetTime) || 
+          (joints[i].diff <= 3))
+          
       {
         joints[i].targetAngle = 0;
         joints[i].targetTime = 0;
@@ -135,38 +147,41 @@ void checkMovements(void)
       else
       { // Still need to move more
         joints[i].currAngle = map(
-            joints[i].moveTimeSoFar, // Current progress
-            0,                       // Start time
-            joints[i].targetTime,    // End time
-            joints[i].currAngle,
-            joints[i].targetAngle);
+                                joints[i].moveTimeSoFar, // Current progress
+                                0,                       // Start time
+                                joints[i].targetTime,    // End time
+                                joints[i].currAngle,
+                                joints[i].targetAngle);
         joints[i].moveTimeSoFar = currentTime;
         Serial.println("Servo " + String(i) + " moves to angle " + String(joints[i].currAngle) + ". MoveTimeSoFar " + String(joints[i].moveTimeSoFar));
         // delay(50);
-        HCPCA9685.Servo(i, joints[i].currAngle);
+        HCPCA9685.Servo(i + 1, joints[i].currAngle);
+        joints[i].diff = abs(joints[i].currAngle - joints[i].targetAngle);
+        Serial.println(String(i) + "d" + String(joints[i].diff));
       }
     }
+    
   }
-  // Serial.println("It took function " + String(millis() - currentTime) + " seconds to complete");
+  //Serial.println("It took function " + String(millis() - currentTime) + " seconds to complete");
 }
 
 void forward()
 {
-  startTimedMovement(3, joints[3].currAngle + 200, SERVO_MOVEMENT_TIME);
-  startTimedMovement(2, joints[2].currAngle + 200, SERVO_MOVEMENT_TIME);
-  startTimedMovement(4, joints[4].currAngle - 50, SERVO_MOVEMENT_TIME);
-  startTimedMovement(6, joints[6].currAngle - 50, SERVO_MOVEMENT_TIME);
+  startTimedMovement(0, joints[0].currAngle + 100, SERVO_MOVEMENT_TIME);
+  startTimedMovement(1, joints[1].currAngle + 200, SERVO_MOVEMENT_TIME);
+  startTimedMovement(2, joints[2].currAngle + 300, SERVO_MOVEMENT_TIME);
+  startTimedMovement(3, joints[3].currAngle + 480, SERVO_MOVEMENT_TIME);
 
   waitAllToReach();
 
-  startTimedMovement(0, joints[0].currAngle - 50, SERVO_MOVEMENT_TIME);
-  startTimedMovement(4, joints[4].currAngle + 50, SERVO_MOVEMENT_TIME);
-  startTimedMovement(2, joints[2].currAngle - 60, SERVO_MOVEMENT_TIME);
-  startTimedMovement(6, joints[6].currAngle + 60, SERVO_MOVEMENT_TIME);
+  startTimedMovement(0, 0, SERVO_MOVEMENT_TIME);
+  startTimedMovement(1, 0, SERVO_MOVEMENT_TIME);
+  startTimedMovement(2, 0, SERVO_MOVEMENT_TIME);
+  startTimedMovement(3, 0, SERVO_MOVEMENT_TIME);
 }
 
 /*
- startTimedMovement(3, joints[3].currAngle - 200, 100000);
+  startTimedMovement(3, joints[3].currAngle - 200, 100000);
     startTimedMovement(2, joints[2].currAngle - 200, 100000);
 
     delay(50);
@@ -205,4 +220,4 @@ void forward()
     startTimedMovement(5, joints[5].currAngle - 60, SERVO_MOVEMENT_TIME);
     delayMicroseconds(50);
 */
-}
+
