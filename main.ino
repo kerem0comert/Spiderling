@@ -208,7 +208,7 @@ void forward()
     startTimedMovement(1, joints[1].currAngle + 60, SERVO_MOVEMENT_TIME);
     startTimedMovement(5, joints[5].currAngle + 60, SERVO_MOVEMENT_TIME);
 
-    delayMicroseconds(50);
+    delayMicroseconds(50); 
 
     startTimedMovement(0, joints[0].currAngle + 50, SERVO_MOVEMENT_TIME);
     startTimedMovement(4, joints[4].currAngle - 50, SERVO_MOVEMENT_TIME);
