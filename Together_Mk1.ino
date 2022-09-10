@@ -1,3 +1,20 @@
+//  --------                 --------
+// |  D9    |               |  D7    |
+// | joint9 |               | joint7 |
+//  ----- --------     --------- -----
+//       |  Foot 3 |  |  Foot4 |
+//       |  D8     |  |  D6    |
+//       | joint10 |  | joint6 |
+//        --------     --------
+//       |  Foot2 |  |  Foot1  |
+//       |  D2    |  |   D4    |
+//       | joint2 |  |  joint4 |
+//  ----- --------    --------- -----
+// |  D3    |               |  D5    |
+// | joint3 |               | joint5 |
+//  --------                 --------
+//                Front
+
 #include <VarSpeedServo.h>
 #include <FlexiTimer2.h>
 #define I2CAdd 0x40 // Define the I2C address of PCA9685
@@ -13,14 +30,17 @@ const int HCPCA_MAX_ANGLE = 480;
 
 void setup()
 {
+  for(int i=0; i < SERVO_COUNT;i++){
+    servos[i].attach(9+i);
+  }
   Serial.begin(9600);
 
   HCPCA9685.Init(SERVO_MODE);
   HCPCA9685.Sleep(false);
 
   initDefaultPositions();
-
-  FlexiTimer2::set(70, readValue);
+  delay(500);
+  FlexiTimer2::set(10, readValue);
   FlexiTimer2::start();
 }
 
@@ -38,18 +58,27 @@ void writeToHPCPA(unsigned char servoId, int angle){
 void readValue(void)
 {
   sei();
-  for(int i=0;i<SERVO_COUNT;i++){
-    writeToHPCPA(map(valueToMap, SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, HCPCA_MIN_ANGLE, HCPCA_MAX_ANGLE));
+  for(int i=0;i<3;i++){
+    Serial.println(String(i) + " moved to " + servos[i].read());
+    writeToHPCPA(i, map(servos[i].read(), SERVO_MIN_ANGLE, SERVO_MAX_ANGLE, HCPCA_MIN_ANGLE, HCPCA_MAX_ANGLE));
   }
 }
 
 void loop()
 {
-  servos[0].write(100, 30, false);
-  servos[1].write(70, 50, false);
-  servos[2].write(100, 30, true);
+  servos[0].write(180, 10, false);
+  servos[1].write(180, 10, false);
+  servos[2].write(180, 10, false);
+  servos[0].wait();
+  servos[1].wait();
+  servos[2].wait();
 
-  servos[0].write(150, 50, false);
+ 
+  servos[0].write(0, 10, false);
+  servos[1].write(0, 10, false);
+  servos[2].write(0, 10, false);
+
+  /*servos[0].write(150, 50, false);
   servos[1].write(10, 50, false);
-  servos[2].write(170, 90, true);
+  servos[2].write(170, 90, true);*/
 }
